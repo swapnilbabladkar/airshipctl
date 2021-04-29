@@ -1,0 +1,100 @@
+apiVersion: airshipit.org/v1alpha1
+kind: Templater
+metadata:
+  name: m3-host-template
+  annotations:
+    config.kubernetes.io/function: |-
+      container:
+        image: quay.io/airshipit/templater:v2
+
+values:
+  # hosts:
+  #    (filled in from the comprehensive site-wide host-catalogue)
+  # hostsToGenerate:
+  #    (filled in with phase-specific host-generation-catalogue)
+  # commonNetworking:
+  #    (filled in with the type-specific common-networking)
+
+  # Additional hardwareProfiles can be defined within their own functions,
+  # and then substituted into the stanza below.
+  # See function/hardwareprofile-example for an example of how to do this.
+  hardwareProfiles:
+    default:
+      # Reference: https://github.com/metal3-io/metal3-docs/blob/master/design/baremetal-operator/bios-config.md
+      firmware:
+        sriovEnabled: false
+        virtualizationDisabled: false
+        simultaneousMultithreadingDisabled: false
+
+template: |
+  {{- $envAll := . }}
+  {{- range .hostsToGenerate }}
+  {{- $hostName := . }}
+  {{- $host := index $envAll.hosts $hostName }}
+  {{- /* If no hardwareProfile is defined for a host, use the default */ -}}
+  {{- if not $host.hardwareProfile }}
+  {{- $_ := set $host "hardwareProfile" "default" }}
+  {{- end }}
+  {{- $hardwareProfile := index $envAll.hardwareProfiles $host.hardwareProfile }}
+  ---
+  apiVersion: metal3.io/v1alpha1
+  kind: BareMetalHost
+  metadata:
+    annotations:
+    labels:
+    name: {{ $hostName }}
+  spec:
+    online: false
+    bootMACAddress: {{ $host.macAddress }}
+    bootMode: {{ $host.bootMode }}
+    networkData:
+      name: {{ $hostName }}-network-data
+      namespace: default
+    bmc:
+      address: {{ $host.bmcAddress }}
+      credentialsName: {{ $hostName }}-bmc-secret
+      disableCertificateVerification: {{ $host.disableCertificateVerification }}
+    firmware:
+  {{ toYaml $hardwareProfile.firmware | indent 4 }}
+  {{- /* If no raid is defined for a host, simply skip. There is no default setting for raid */ -}}
+  {{- /* Reference for RAID: https://github.com/metal3-io/metal3-docs/pull/134 */ -}}
+  {{- if $hardwareProfile.raid }}
+    raid:
+  {{ toYaml $hardwareProfile.raid | indent 4 }}
+  {{- end }}
+
+  ---
+  apiVersion: v1
+  kind: Secret
+  metadata:
+    name: {{ $hostName }}-bmc-secret
+  data:
+    username: {{ $host.bmcUsername | b64enc }}
+    password: {{ $host.bmcPassword | b64enc }}
+  type: Opaque
+  ---
+  apiVersion: v1
+  kind: Secret
+  metadata:
+    name: {{ $hostName }}-network-data
+  stringData:
+    networkData: |
+      links:
+        {{- range $envAll.commonNetworking.links }}
+      -
+  {{ toYaml . | indent 6 }}
+        {{- if $host.macAddresses }}
+        ethernet_mac_address: {{ index $host.macAddresses .id }}
+        {{- end }}
+        {{- end }}
+      networks:
+        {{- range $envAll.commonNetworking.networks }}
+      -
+  {{ toYaml . | indent 6 }}
+        ip_address: {{ index $host.ipAddresses .id }}
+        {{- end }}
+      services:
+  {{ toYaml $envAll.commonNetworking.services | indent 6 }}
+  type: Opaque
+
+  {{ end -}}

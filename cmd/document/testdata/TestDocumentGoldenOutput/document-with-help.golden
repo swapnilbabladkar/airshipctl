@@ -1,0 +1,13 @@
+Manage deployment documents
+
+Usage:
+  document [command]
+
+Available Commands:
+  help        Help about any command
+  pull        Pulls documents from remote git repository
+
+Flags:
+  -h, --help   help for document
+
+Use "document [command] --help" for more information about a command.

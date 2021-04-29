@@ -1,0 +1,7 @@
+apiVersion: airshipit.org/v1alpha1
+kind: PhasePlan
+metadata:
+  name: phasePlan
+description: "Default phase plan"
+phases:
+  - name: phase

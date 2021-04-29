@@ -1,0 +1,22 @@
+Create or modify a context in the airshipctl config files.
+
+Usage:
+  set-context NAME [flags]
+
+Examples:
+
+# Create a new context named "exampleContext"
+airshipctl config set-context exampleContext \
+  --manifest=exampleManifest \
+
+# Update the manifest of the current-context
+airshipctl config set-context \
+  --current \
+  --manifest=exampleManifest
+
+
+Flags:
+      --current                    update the current context
+  -h, --help                       help for set-context
+      --management-config string   set the management config for the specified context
+      --manifest string            set the manifest for the specified context

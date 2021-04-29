@@ -1,0 +1,8 @@
+resources:
+  - ../kubeconfig
+  - ../../../phases
+  - catalogue.yaml
+  - validation-config.yaml
+transformers:
+  - ../../../function/bootstrap/replacements
+  - ../../../function/validator

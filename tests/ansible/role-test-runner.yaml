@@ -1,0 +1,29 @@
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+---
+- hosts: primary
+  tasks:
+    - name: set default roles
+      set_fact:
+        test_subject_roles_default:
+        - libvirt-network
+        - libvirt-pool
+        - libvirt-volume
+        - libvirt-domain
+        - apache-wsgi-sushy-emulator
+        - airship-libvirt-gate
+    - name: run tests against defined roles
+      include_tasks: "../../roles/{{ role_name }}/tests/main.yaml"
+      with_items: "{{ test_subject_roles | default(test_subject_roles_default) }}"
+      loop_control:
+        loop_var: role_name

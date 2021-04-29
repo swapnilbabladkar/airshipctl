@@ -1,0 +1,46 @@
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Description:
+#   Add given hosts to existing libvirt network
+#
+# Inputs:
+#   network_action: "add_dhcp_hosts"
+#   network_args:
+#     name: <name of network>
+#     hosts:
+#       - name:
+#         mac:
+#         ip:
+#       - name:
+#         mac:
+#         ip:
+
+- name: Validate input
+  assert:
+    that:
+      - "network_args is defined"
+      - "network_args.name is defined"
+      - "network_args.hosts is defined"
+      - "network_args.hosts | list"
+
+- name: add dhcp hosts to network
+  environment:
+    LIBVIRT_DEFAULT_URI: qemu:///system
+  shell: >-
+    virsh net-update {{ network_args.name }} \
+      add --section ip-dhcp-host \
+      --xml "<host mac='{{ single_dhcp_host.mac}}' ip='{{ single_dhcp_host.name }}'/>" \
+      --config --live
+  loop: "{{ network_args.hosts }}"
+  loop_control:
+    loop_var: single_dhcp_host

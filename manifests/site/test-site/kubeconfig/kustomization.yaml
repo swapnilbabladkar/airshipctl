@@ -1,0 +1,7 @@
+resources:
+  - kubeconfig.yaml
+  - ../target/catalogues
+
+transformers:
+  - update-target.yaml
+  - ../../../function/airshipctl-cleanup/

@@ -1,0 +1,32 @@
+apiVersion: airshipit.org/v1alpha1
+contexts:
+  dummy_context:
+    managementConfiguration: dummy_management_config
+    manifest: dummy_manifest
+currentContext: dummy_context
+kind: Config
+managementConfiguration:
+  dummy_management_config:
+    insecure: true
+    type: redfish
+manifests:
+  dummy_manifest:
+    inventoryRepositoryName: primary
+    metadataPath: metadata.yaml
+    phaseRepositoryName: primary
+    repositories:
+      primary:
+        auth:
+          sshKey: testdata/test-key.pem
+          type: ssh-key
+        checkout:
+          branch: ""
+          commitHash: ""
+          force: false
+          localBranch: false
+          tag: v1.0.1
+        url: http://dummy.url.com/manifests.git
+    targetPath: /var/tmp/
+permissions:
+  DirectoryPermission: 488
+  FilePermission: 416

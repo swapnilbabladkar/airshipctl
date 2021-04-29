@@ -1,0 +1,14 @@
+resources:
+  - ../../../../function/baremetal-operator
+  - ../../../../function/hwcc
+  - ../../../../function/clusterctl
+  - ../../../../composite/flux-helm
+  - ../catalogues
+
+commonLabels:
+  airshipit.org/stage: initinfra
+
+transformers:
+  - ../../../../function/baremetal-operator/replacements
+  - ../../../../function/flux/source-controller/replacements
+  - ../../../../function/flux/helm-controller/replacements

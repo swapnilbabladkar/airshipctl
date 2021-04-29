@@ -1,0 +1,201 @@
+# These rules inject versioned artifacts into the clusterctl function.
+apiVersion: airshipit.org/v1alpha1
+kind: ReplacementTransformer
+metadata:
+  name: k8scontrol-versions-replacements
+  annotations:
+    config.kubernetes.io/function: |-
+      container:
+        image: quay.io/airshipit/replacement-transformer:v2
+replacements:
+# Replace capm3 versions
+- source:
+    objref:
+      kind: VersionsCatalogue
+      name: versions-airshipctl
+    fieldref: "{.spec.capi_images.capm3.manager}"
+  target:
+    objref:
+      kind: Clusterctl
+      name: clusterctl_init
+    fieldrefs: ["{.images.infrastructure-metal3/cluster-api-provider-metal3}"]
+- source:
+    objref:
+      kind: VersionsCatalogue
+      name: versions-airshipctl
+    fieldref: "{.spec.capi_images.capm3.auth_proxy}"
+  target:
+    objref:
+      kind: Clusterctl
+      name: clusterctl_init
+    fieldrefs: ["{.images.infrastructure-metal3/kube-rbac-proxy}"]
+- source:
+    objref:
+      kind: VersionsCatalogue
+      name: versions-airshipctl
+    fieldref: "{.spec.capi_images.capm3.ipam-manager}"
+  target:
+    objref:
+      kind: Clusterctl
+      name: clusterctl_init
+    fieldrefs: ["{.images.infrastructure-metal3/ip-address-manager}"]
+# Replace cacpk versions
+- source:
+    objref:
+      kind: VersionsCatalogue
+      name: versions-airshipctl
+    fieldref: "{.spec.capi_images.cacpk.manager}"
+  target:
+    objref:
+      kind: Clusterctl
+      name: clusterctl_init
+    fieldrefs: ["{.images.control-plane-kubeadm/kubeadm-control-plane-controller}"]
+- source:
+    objref:
+      kind: VersionsCatalogue
+      name: versions-airshipctl
+    fieldref: "{.spec.capi_images.cacpk.auth_proxy}"
+  target:
+    objref:
+      kind: Clusterctl
+      name: clusterctl_init
+    fieldrefs: ["{.images.control-plane-kubeadm/kube-rbac-proxy}"]
+# Replace cabpk versions
+- source:
+    objref:
+      kind: VersionsCatalogue
+      name: versions-airshipctl
+    fieldref: "{.spec.capi_images.cabpk.manager}"
+  target:
+    objref:
+      kind: Clusterctl
+      name: clusterctl_init
+    fieldrefs: ["{.images.bootstrap-kubeadm/kubeadm-bootstrap-controller}"]
+- source:
+    objref:
+      kind: VersionsCatalogue
+      name: versions-airshipctl
+    fieldref: "{.spec.capi_images.cabpk.auth_proxy}"
+  target:
+    objref:
+      kind: Clusterctl
+      name: clusterctl_init
+    fieldrefs: ["{.images.bootstrap-kubeadm/kube-rbac-proxy}"]
+# Replace capd versions
+- source:
+    objref:
+      kind: VersionsCatalogue
+      name: versions-airshipctl
+    fieldref: "{.spec.capi_images.capd.manager}"
+  target:
+    objref:
+      kind: Clusterctl
+      name: clusterctl_init
+    fieldrefs: ["{.images.infrastructure-docker/capd-manager}"]
+- source:
+    objref:
+      kind: VersionsCatalogue
+      name: versions-airshipctl
+    fieldref: "{.spec.capi_images.capd.auth_proxy}"
+  target:
+    objref:
+      kind: Clusterctl
+      name: clusterctl_init
+    fieldrefs: ["{.images.infrastructure-docker/kube-rbac-proxy}"]
+# Replace capo versions
+- source:
+    objref:
+      kind: VersionsCatalogue
+      name: versions-airshipctl
+    fieldref: "{.spec.capi_images.capo.manager}"
+  target:
+    objref:
+      kind: Clusterctl
+      name: clusterctl_init
+    fieldrefs: ["{.images.infrastructure-openstack/capi-openstack-controller-amd64}"]
+- source:
+    objref:
+      kind: VersionsCatalogue
+      name: versions-airshipctl
+    fieldref: "{.spec.capi_images.capo.auth_proxy}"
+  target:
+    objref:
+      kind: Clusterctl
+      name: clusterctl_init
+    fieldrefs: ["{.images.infrastructure-openstack/kube-rbac-proxy}"]
+# Replace capg versions
+- source:
+    objref:
+      kind: VersionsCatalogue
+      name: versions-airshipctl
+    fieldref: "{.spec.capi_images.capg.manager}"
+  target:
+    objref:
+      kind: Clusterctl
+      name: clusterctl_init
+    fieldrefs: ["{.images.infrastructure-gcp/cluster-api-gcp-controller}"]
+- source:
+    objref:
+      kind: VersionsCatalogue
+      name: versions-airshipctl
+    fieldref: "{.spec.capi_images.capg.auth_proxy}"
+  target:
+    objref:
+      kind: Clusterctl
+      name: clusterctl_init
+    fieldrefs: ["{.images.infrastructure-gcp/kube-rbac-proxy}"]
+# Replace capi versions
+- source:
+    objref:
+      kind: VersionsCatalogue
+      name: versions-airshipctl
+    fieldref: "{.spec.capi_images.capi.manager}"
+  target:
+    objref:
+      kind: Clusterctl
+      name: clusterctl_init
+    fieldrefs: ["{.images.cluster-api/cluster-api-controller}"]
+- source:
+    objref:
+      kind: VersionsCatalogue
+      name: versions-airshipctl
+    fieldref: "{.spec.capi_images.capi.auth_proxy}"
+  target:
+    objref:
+      kind: Clusterctl
+      name: clusterctl_init
+    fieldrefs: ["{.images.cluster-api/kube-rbac-proxy}"]
+
+# Replace capz versions
+- source:
+    objref:
+      kind: VersionsCatalogue
+      name: versions-airshipctl
+    fieldref: "{.spec.capi_images.capz.manager}"
+  target:
+    objref:
+      kind: Clusterctl
+      name: clusterctl_init
+    fieldrefs: ["{.images.infrastructure-azure/cluster-api-azure-controller}"]
+- source:
+    objref:
+      kind: VersionsCatalogue
+      name: versions-airshipctl
+    fieldref: "{.spec.capi_images.capz.auth_proxy}"
+  target:
+    objref:
+      kind: Clusterctl
+      name: clusterctl_init
+    fieldrefs: ["{.images.infrastructure-azure/kube-rbac-proxy}"]
+
+# Replace the cert-manager image repository in the Clusterctl
+- source:
+    objref:
+      kind: VersionsCatalogue
+      name: versions-airshipctl
+    fieldref: "{.spec.capi_images.cert-manager.repository}"
+  target:
+    objref:
+      kind: Clusterctl
+      name: clusterctl_init
+    fieldrefs: ["{.images.cert-manager.repository}"]

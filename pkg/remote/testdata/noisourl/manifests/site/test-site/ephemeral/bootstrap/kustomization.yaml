@@ -1,0 +1,4 @@
+resources:
+- baremetal.yaml
+- remote_direct_configuration.yaml
+- phase.yaml

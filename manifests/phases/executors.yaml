@@ -1,0 +1,393 @@
+---
+apiVersion: airshipit.org/v1alpha1
+kind: KubernetesApply
+metadata:
+  labels:
+    airshipit.org/deploy-k8s: "false"
+  name: kubernetes-apply
+config:
+  waitOptions:
+    timeout: 2000
+  pruneOptions:
+    prune: false
+---
+apiVersion: airshipit.org/v1alpha1
+kind: KubernetesApply
+metadata:
+  labels:
+    airshipit.org/deploy-k8s: "false"
+  name: kubernetes-apply-controlplane
+config:
+  waitOptions:
+    timeout: 3600
+  pruneOptions:
+    prune: false
+---
+# This is added to support phase with no-wait
+# When there is a wait, then it does status-check and fails
+# if the resource status(condition) is not met.
+# There are cases where the resource do not have status
+# field implemeneted. So a wait will fail with status check
+apiVersion: airshipit.org/v1alpha1
+kind: KubernetesApply
+metadata:
+  labels:
+    airshipit.org/deploy-k8s: "false"
+  name: kubernetes-apply-nowait
+config:
+  waitOptions:
+    timeout: 0
+  pruneOptions:
+    prune: false
+---
+apiVersion: airshipit.org/v1alpha1
+kind: Clusterctl
+metadata:
+  name: clusterctl_move
+move-options: {}
+action: move
+---
+apiVersion: airshipit.org/v1alpha1
+kind: GenericContainer
+metadata:
+  name: encrypter
+  labels:
+    airshipit.org/deploy-k8s: "false"
+spec:
+  type: krm
+  sinkOutputDir: "target/generator/results/generated"
+  image: gcr.io/kpt-fn-contrib/sops:v0.1.0
+  envVars:
+    - SOPS_IMPORT_PGP
+    - SOPS_PGP_FP
+config: |
+  apiVersion: v1
+  kind: ConfigMap
+  data:
+    cmd: encrypt
+    unencrypted-regex: '^(kind|apiVersion|group|metadata)$'
+---
+apiVersion: airshipit.org/v1alpha1
+kind: GenericContainer
+metadata:
+  name: decrypter
+  labels:
+    airshipit.org/deploy-k8s: "false"
+spec:
+  type: krm
+  image: gcr.io/kpt-fn-contrib/sops:v0.1.0
+  envVars:
+    - SOPS_IMPORT_PGP
+    - SOPS_PGP_FP
+config: |
+  apiVersion: v1
+  kind: ConfigMap
+  data:
+    cmd: decrypt
+---
+# This executor launchs a bootstrap container, which creates
+# an Azure Kubernetes Service (AKS) cluster
+apiVersion: airshipit.org/v1alpha1
+kind: BootConfiguration
+metadata:
+  name: ephemeral-az-genesis
+  labels:
+    airshipit.org/deploy-k8s: "false"
+ephemeralCluster:
+  bootstrapCommand: create
+  configFilename: azure-config.yaml
+bootstrapContainer:
+  containerRuntime: docker
+  image: quay.io/airshipit/capz-bootstrap:latest
+  volume: /tmp:/kube
+  saveKubeconfigFileName: capz.kubeconfig
+---
+# This executor launchs a bootstrap container, which deletes
+# an Azure Kubernetes Service (AKS) cluster
+apiVersion: airshipit.org/v1alpha1
+kind: BootConfiguration
+metadata:
+  name: ephemeral-az-cleanup
+  labels:
+    airshipit.org/deploy-k8s: "false"
+ephemeralCluster:
+  bootstrapCommand: delete
+  configFilename: azure-config.yaml
+bootstrapContainer:
+  containerRuntime: docker
+  image: quay.io/airshipit/capz-bootstrap:latest
+  volume: /tmp:/kube
+  saveKubeconfigFileName: capz.kubeconfig
+---
+# This executor launchs a bootstrap container, which creates
+# a Google Kubernetes Engine (GKE) cluster
+apiVersion: airshipit.org/v1alpha1
+kind: BootConfiguration
+metadata:
+  name: ephemeral-gcp-genesis
+  labels:
+    airshipit.org/deploy-k8s: "false"
+ephemeralCluster:
+  bootstrapCommand: create
+  configFilename: gcp-config.yaml
+bootstrapContainer:
+  containerRuntime: docker
+  image: quay.io/airshipit/capg-bootstrap:latest
+  volume: /tmp:/kube
+  saveKubeconfigFileName: capg.kubeconfig
+---
+# This executor launchs a bootstrap container, which deletes
+# a Google Kubernetes Engine (GKE) cluster
+apiVersion: airshipit.org/v1alpha1
+kind: BootConfiguration
+metadata:
+  name: ephemeral-gcp-cleanup
+  labels:
+    airshipit.org/deploy-k8s: "false"
+ephemeralCluster:
+  bootstrapCommand: delete
+  configFilename: gcp-config.yaml
+bootstrapContainer:
+  containerRuntime: docker
+  image: quay.io/airshipit/capg-bootstrap:latest
+  volume: /tmp:/kube
+  saveKubeconfigFileName: capg.kubeconfig
+---
+# This executor launchs a bootstrap container, which creates
+# an ephemeral K8S cluster in Openstack
+apiVersion: airshipit.org/v1alpha1
+kind: BootConfiguration
+metadata:
+  name: ephemeral-os-genesis
+  labels:
+    airshipit.org/deploy-k8s: "false"
+ephemeralCluster:
+  bootstrapCommand: create
+  configFilename: openstack-config.yaml
+bootstrapContainer:
+  containerRuntime: docker
+  image: quay.io/airshipit/capo-ephemeral:latest
+  volume: /tmp:/kube
+  saveKubeconfigFileName: capo.kubeconfig
+---
+# This executor launchs a bootstrap container, which deletes
+# ephemeral K8S cluster in Openstack
+apiVersion: airshipit.org/v1alpha1
+kind: BootConfiguration
+metadata:
+  name: ephemeral-os-cleanup
+  labels:
+    airshipit.org/deploy-k8s: "false"
+ephemeralCluster:
+  bootstrapCommand: delete
+  configFilename: openstack-config.yaml
+bootstrapContainer:
+  containerRuntime: docker
+  image: quay.io/airshipit/capo-ephemeral:latest
+  volume: /tmp:/kube
+  saveKubeconfigFileName: capo.kubeconfig
+---
+apiVersion: airshipit.org/v1alpha1
+kind: BaremetalManager
+metadata:
+  name: RemoteDirectEphemeral
+  labels:
+    airshipit.org/deploy-k8s: "false"
+spec:
+  operation: remote-direct
+  hostSelector:
+    name: EPHEMERAL_NODE
+  operationOptions:
+    remoteDirect:
+      isoURL: ISO_URL
+---
+apiVersion: airshipit.org/v1alpha1
+kind: GenericContainer
+metadata:
+  name: iso-cloud-init-data
+  labels:
+    airshipit.org/deploy-k8s: "false"
+spec:
+  type: krm
+  image: quay.io/airshipit/cloud-init:v2
+  mounts:
+    - type: bind
+      src: /srv/images
+      dst: /config
+      rw: true
+config: |
+  apiVersion: airshipit.org/v1alpha1
+  kind: IsoConfiguration
+  metadata:
+    name: isogen
+  builder:
+    userDataSelector:
+      kind: Secret
+      labelSelector: airshipit.org/ephemeral-user-data
+    userDataKey: userData
+    networkConfigSelector:
+      kind: BareMetalHost
+      labelSelector: airshipit.org/ephemeral-node
+    networkConfigKey: networkData
+    outputFileName: ephemeral.iso
+  container:
+    volume: /srv/images:/config # for compatibility with image-builder
+
+---
+apiVersion: airshipit.org/v1alpha1
+kind: GenericContainer
+metadata:
+  name: iso-build-image
+  labels:
+    airshipit.org/deploy-k8s: "false"
+spec:
+  type: airship
+  airship:
+    privileged: true
+    containerRuntime: docker
+    cmd:
+      - /bin/bash
+      - -c
+      - /usr/bin/local/entrypoint.sh 1>&2
+  image: quay.io/airshipit/image-builder:latest-ubuntu_focal
+  mounts:
+    - type: bind
+      src: /srv/images
+      dst: /config
+      rw: true
+  envVars:
+    - IMAGE_TYPE=iso
+    - BUILDER_CONFIG=/config/builder-conf.yaml
+    - USER_DATA_FILE=user-data
+    - NET_CONFIG_FILE=network-data
+    - OUTPUT_FILE_NAME=ephemerial.iso
+    - OUTPUT_METADATA_FILE_NAME=output-metadata.yaml
+    - http_proxy
+    - https_proxy
+    - HTTP_PROXY
+    - HTTPS_PROXY
+    - no_proxy
+    - NO_PROXY
+config: |
+  apiVersion: airshipit.org/v1alpha1
+  kind: DoesNotMatter
+  metadata:
+    name: isogen
+---
+apiVersion: airshipit.org/v1alpha1
+kind: GenericContainer
+metadata:
+  name: kubectl-wait-node
+  labels:
+    airshipit.org/deploy-k8s: "false"
+spec:
+  type: krm
+  image: quay.io/airshipit/toolbox:latest
+  hostNetwork: true
+configRef:
+  kind: ConfigMap
+  name: kubectl-wait-node
+  apiVersion: v1
+---
+apiVersion: airshipit.org/v1alpha1
+kind: GenericContainer
+metadata:
+  name: kubectl-get-node
+  labels:
+    airshipit.org/deploy-k8s: "false"
+spec:
+  type: krm
+  image: quay.io/airshipit/toolbox:latest
+  hostNetwork: true
+configRef:
+  kind: ConfigMap
+  name: kubectl-get-node
+  apiVersion: v1
+---
+apiVersion: airshipit.org/v1alpha1
+kind: GenericContainer
+metadata:
+  name: kubectl-get-pods
+  labels:
+    airshipit.org/deploy-k8s: "false"
+spec:
+  type: krm
+  image: quay.io/airshipit/toolbox:latest
+  hostNetwork: true
+configRef:
+  kind: ConfigMap
+  name: kubectl-get-pods
+  apiVersion: v1
+---
+apiVersion: airshipit.org/v1alpha1
+kind: GenericContainer
+metadata:
+  name: kubectl-wait-tigera
+  labels:
+    airshipit.org/deploy-k8s: "false"
+spec:
+  type: krm
+  image: quay.io/airshipit/toolbox:latest
+  hostNetwork: true
+configRef:
+  kind: ConfigMap
+  name: kubectl-wait-tigera
+  apiVersion: v1
+---
+apiVersion: airshipit.org/v1alpha1
+kind: GenericContainer
+metadata:
+  name: kubectl-wait-deploy
+  labels:
+    airshipit.org/deploy-k8s: "false"
+spec:
+  type: krm
+  image: quay.io/airshipit/toolbox:latest
+  hostNetwork: true
+configRef:
+  kind: ConfigMap
+  name: kubectl-wait-deploy
+  apiVersion: v1
+---
+apiVersion: airshipit.org/v1alpha1
+kind: GenericContainer
+metadata:
+  name: kubectl-wait-pods
+  labels:
+    airshipit.org/deploy-k8s: "false"
+spec:
+  type: krm
+  image: quay.io/airshipit/toolbox:latest
+  hostNetwork: true
+configRef:
+  kind: ConfigMap
+  name: kubectl-wait-pods
+  apiVersion: v1
+---
+apiVersion: airshipit.org/v1alpha1
+kind: GenericContainer
+metadata:
+  name: document-validation
+  labels:
+    airshipit.org/deploy-k8s: "false"
+spec:
+  type: krm
+  image: quay.io/airshipit/kubeval-validator:latest
+  envVars:
+    - VALIDATOR_PREVENT_CLEANUP # Validator won't cleanup its working directory after finish
+    - VALIDATOR_PLAN_VALIDATION # Validator will not use phase-specific settings for validation
+    - VALIDATOR_REWRITE_SCHEMAS # Validator will rewrite schemas for kubeval if they already exist
+  mounts:
+    - type: bind
+      src: airshipctl/manifests
+      dst: /manifests
+      rw: false
+    - type: bind
+      src: ~/.airship
+      dst: /workdir
+      rw: true
+  hostNetwork: true
+configRef:
+  apiVersion: airshipit.org/v1alpha1
+  kind: KubevalOptions
+  name: kubeval-options

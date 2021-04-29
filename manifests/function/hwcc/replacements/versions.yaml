@@ -1,0 +1,30 @@
+apiVersion: airshipit.org/v1alpha1
+kind: ReplacementTransformer
+metadata:
+  name: hwcc-versions-replacements
+  annotations:
+    config.kubernetes.io/function: |-
+      container:
+        image: quay.io/airshipit/replacement-transformer:v2
+replacements:
+- source:
+    objref:
+      kind: VersionsCatalogue
+      name: versions-airshipctl
+    fieldref: spec.images.hwcc.manager.manager.image
+  target:
+    objref:
+      kind: Deployment
+      name: hardware-classification-controller-manager
+    fieldrefs: ["spec.template.spec.containers[name=manager].image"]
+- source:
+    objref:
+      kind: VersionsCatalogue
+      name: versions-airshipctl
+    fieldref: spec.images.hwcc.manager.kube_rbac_proxy.image
+  target:
+    objref:
+      kind: Deployment
+      name: hardware-classification-controller-manager
+    fieldrefs: ["spec.template.spec.containers[name=kube-rbac-proxy].image"]
+

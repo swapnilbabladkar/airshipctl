@@ -1,0 +1,9 @@
+resources:
+  - ephemeralduplicate.yaml
+  - ephemeralmissing.yaml
+  - networkdatabadpointer.yaml
+  - networkdatamalformed.yaml
+  - networkdatamissing.yaml
+  - userdatamalformed.yaml
+  - userdatamissing.yaml
+  - validdocset.yaml

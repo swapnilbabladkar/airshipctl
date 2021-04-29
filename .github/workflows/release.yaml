@@ -1,0 +1,126 @@
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: release
+
+# Expects git tags in the following formats:
+#   airshipctl: v1.2.3 (no prefix)
+#   krm functions: <quay image name>-v1.2.3 e.g. replacement-transformer-v1.2.3
+on:
+  push:
+    tags:
+      - '*'
+
+jobs:
+  # Parses git tags to determine quay image name and semver version and publishes
+  # corresponding image tags in quay for the full semver version as well as major
+  # and minor versions if not a prerelease.
+  release-image:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Calculate semver tags
+        id: semver_tags
+        run: |
+          set -x
+          set -e
+
+          TAG=$(echo "${TAG_REF}" | sed -e 's|refs/tags/||')
+          for IMG in airshipctl $(cd krm-functions; echo */ | tr -d /)
+          do
+            if [[ $IMG == airshipctl ]]
+            then
+              TAG_PREFIX=
+            else
+              TAG_PREFIX=$IMG-
+            fi
+            if [[ "$TAG" =~ ^($TAG_PREFIX)?v?(([0-9]+)\.([0-9]+)\.([0-9]+)(-[a-zA-Z]+(\.[0-9]+)?)?)$ ]]
+            then
+              TAGS="v${BASH_REMATCH[2]}"
+              # Prereleases don't count as major and minor
+              if [[ -z ${BASH_REMATCH[6]} ]]
+              then
+                MINOR_TAG="v${BASH_REMATCH[3]}.${BASH_REMATCH[4]}"
+                MAJOR_TAG="v${BASH_REMATCH[3]}"
+                TAGS="$TAGS $MINOR_TAG $MAJOR_TAG"
+              fi
+              echo ::set-output name=IMG::$IMG
+              echo ::set-output name=TAGS::$TAGS
+              exit 0
+            fi
+          done
+          echo No valid semver tag found
+          exit 1
+        env:
+          TAG_REF: ${{ github.ref }}
+      - name: Login to image registry
+        uses: docker/login-action@v1
+        with:
+          registry: quay.io
+          username: ${{ secrets.QUAY_USERNAME }}
+          password: ${{ secrets.QUAY_PASSWORD }}
+      - name: Publish semver image tags
+        run: |
+          set -x
+          set -e
+
+          SOURCE_TAG=$IMG:$SOURCE
+          docker pull $SOURCE_TAG
+          for i in $TARGETS
+          do
+            TARGET_TAG=$IMG:$i
+            docker tag $SOURCE_TAG $TARGET_TAG
+            docker push $TARGET_TAG
+          done
+        env:
+          IMG: ${{ format('quay.io/airshipit/{0}', steps.semver_tags.outputs.IMG) }}
+          SOURCE: ${{ github.sha }}
+          TARGETS: ${{ steps.semver_tags.outputs.TAGS }}
+
+  release-github:
+    # Only create github releases for airshipctl (unprefixed semver tag), not krm functions.
+    if: ${{ startsWith(github.ref, 'refs/tags/v') }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - name: Download release notes utility
+        run: |
+          sudo npm install github-release-notes@0.17.1 -g
+      - name: Generate release notes
+        run: |
+          TAG_NAME=${TAG##*/}
+          gren changelog --override --generate \
+            --username airshipit --repo airshipctl \
+            --changelog-filename release-notes.md \
+            --token "$GITHUB_TOKEN" \
+            --tags "$TAG_NAME" \
+            --ignore-tags-with '^(?!v\d)' `# only consider semver tags without krm function prefix when finding previous tag` \
+            --debug
+          cat release-notes.md
+        env:
+          TAG: ${{ github.ref }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Setup Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.13.x
+      - name: Generate binaries and create github release
+        uses: goreleaser/goreleaser-action@v1
+        with:
+          version: latest
+          args: release --release-notes=release-notes.md --skip-validate --debug
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,0 +1,39 @@
+apiVersion: airshipit.org/v1alpha1
+kind: ReplacementTransformer
+metadata:
+  name: gating-ingress-versions-replacements
+  annotations:
+    config.kubernetes.io/function: |-
+      container:
+        image: quay.io/airshipit/replacement-transformer:v2
+replacements:
+- source:
+    objref:
+      kind: VersionsCatalogue
+      name: versions-airshipctl
+    fieldref: spec.helm_repositories.ingress-nginx.url
+  target:
+    objref:
+      kind: HelmRepository
+      name: ingress-nginx
+    fieldrefs: ["spec.url"]
+- source:
+    objref:
+      kind: VersionsCatalogue
+      name: versions-airshipctl
+    fieldref: spec.charts.ingress-nginx.chart
+  target:
+    objref:
+      kind: HelmRelease
+      name: ingress
+    fieldrefs: ["spec.chart.spec.chart"]
+- source:
+    objref:
+      kind: VersionsCatalogue
+      name: versions-airshipctl
+    fieldref: spec.charts.ingress-nginx.version
+  target:
+    objref:
+      kind: HelmRelease
+      name: ingress
+    fieldrefs: ["spec.chart.spec.version"]

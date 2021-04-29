@@ -1,0 +1,9 @@
+Run life-cycle phase plan which was defined in document model.
+
+Usage:
+  run PLAN_NAME [flags]
+
+Flags:
+      --dry-run                 simulate phase execution
+  -h, --help                    help for run
+      --wait-timeout duration   wait timeout

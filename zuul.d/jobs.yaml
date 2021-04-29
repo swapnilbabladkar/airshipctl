@@ -1,0 +1,250 @@
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+- job:
+    name: airship-airshipctl-roles-test
+    run: tests/ansible/role-test-runner.yaml
+    nodeset: airship-airshipctl-single-node
+    files:
+      - ^roles/.*$
+
+- job:
+    name: airship-airshipctl-golint
+    pre-run: playbooks/airship-airshipctl-deploy-docker.yaml
+    run: playbooks/airship-airshipctl-golint.yaml
+    nodeset: airship-airshipctl-single-node
+    files: &gofiles
+      - ^Makefile$
+      - ^\.golangci\.yaml$
+      - ^(go\.(mod|sum)|.*\.go)$
+      - ^playbooks/airship-airshipctl-(golint|lint|unit)\.yaml$
+      - ^tools/(coverage_check|golint|gomod_check|install_linter)$
+
+- job:
+    name: airship-airshipctl-lint
+    pre-run: playbooks/airship-airshipctl-deploy-docker.yaml
+    run: playbooks/airship-airshipctl-lint.yaml
+    nodeset: airship-airshipctl-single-node
+
+- job:
+    name: airship-airshipctl-unit
+    pre-run: playbooks/airship-airshipctl-deploy-docker.yaml
+    run: playbooks/airship-airshipctl-unit.yaml
+    nodeset: airship-airshipctl-single-node
+    files: *gofiles
+
+- job:
+    name: airship-airshipctl-check-github-issues
+    description: Checks if a Github issue is referenced in the commit message
+    run: playbooks/airship-airshipctl-check-github-issues.yaml
+    nodeset: airship-airshipctl-single-node
+    voting: false
+
+- job:
+    name: airship-airshipctl-build-image
+    nodeset: airship-airshipctl-single-node
+    run: playbooks/airship-airshipctl-build-images.yaml
+    irrelevant-files: &noncodefiles
+      - ^certs/.*$
+      - ^docs/.*$
+      - ^.*\.md$
+      - ^\.github/.*$
+
+- job:
+    name: airship-airshipctl-validate-site-docs
+    timeout: 6600
+    pre-run:
+      - playbooks/airship-airshipctl-deploy-docker.yaml
+    run: playbooks/airshipctl-gate-runner.yaml
+    nodeset: airship-airshipctl-single-node
+    irrelevant-files: *noncodefiles
+    vars:
+      gate_scripts:
+        - ./tools/deployment/01_install_kubectl.sh
+        - ./tools/deployment/21_systemwide_executable.sh
+        - ./tools/deployment/22_test_configs.sh
+        - ./tools/validate_docs
+    voting: true
+
+- job:
+    name: airship-airshipctl-functional-existing-k8s
+    pre-run: playbooks/airship-airshipctl-deploy-existing-k8s.yaml
+    run: playbooks/airship-airshipctl-functional-existing-k8s.yaml
+    nodeset: airship-airshipctl-single-node
+
+- job:
+    name: airship-airshipctl-upload-git-mirror
+    parent: upload-git-mirror
+    description: Mirrors airship/airshipctl to airshipit/airshipctl
+    vars:
+      git_mirror_repository: airshipit/airshipctl
+    secrets:
+      - name: git_mirror_credentials
+        secret: airship_airshipctl_airshipit_github_secret
+        pass-to-parent: true
+
+- job:
+    name: airship-airshipctl-gate-script-runner
+    attempts: 1
+    timeout: 8400
+    pre-run:
+      - playbooks/airship-airshipctl-deploy-docker.yaml
+      - playbooks/airship-airshipctl-build-gate.yaml
+    post-run: playbooks/airship-collect-logs.yaml
+    run: playbooks/airshipctl-gate-runner.yaml
+    nodeset: airship-airshipctl-single-16GB-bionic-node
+    irrelevant-files: *noncodefiles
+    dependencies:
+      - name: openstack-tox-docs
+        soft: true
+      - name: airship-airshipctl-lint
+        soft: true
+      - name: airship-airshipctl-golint
+        soft: true
+      - name: airship-airshipctl-unit
+        soft: true
+      - name: airship-airshipctl-build-image
+        soft: true
+    vars:
+      site_name: test-site
+      gate_scripts:
+        - ./tools/deployment/01_install_kubectl.sh
+        # 21_systemwide_executable.sh is run in the build-gate pre-run above
+        - ./tools/deployment/22_test_configs.sh
+        - ./tools/deployment/23_pull_documents.sh
+        - ./tools/deployment/23_generate_secrets.sh
+        - ./tools/deployment/24_build_images.sh
+        - ./tools/deployment/25_deploy_ephemeral_node.sh
+        - ./tools/deployment/26_deploy_capi_ephemeral_node.sh
+        - ./tools/deployment/30_deploy_controlplane.sh
+        - ./tools/deployment/31_deploy_initinfra_target_node.sh
+        - ./tools/deployment/32_cluster_init_target_node.sh
+        - ./tools/deployment/33_cluster_move_target_node.sh
+        - ./tools/deployment/35_deploy_worker_node.sh
+        - ./tools/deployment/36_deploy_workload.sh
+        - ./tools/deployment/37_verify_hwcc_profiles.sh
+      serve_dir: /srv/images
+      serve_port: 8099
+      log_roles:
+        - gather-system-logs
+        - airship-gather-apache-logs
+        - airship-gather-libvirt-logs
+        - airship-gather-runtime-logs
+        - airship-airshipctl-gather-configs
+        - describe-kubernetes-objects
+        - airship-gather-pod-logs
+- job:
+    name: airship-airshipctl-gate-script-runner-docker
+    attempts: 1
+    timeout: 3600
+    pre-run: playbooks/airship-airshipctl-deploy-docker.yaml
+    run: playbooks/airshipctl-gate-runner.yaml
+    nodeset: airship-airshipctl-single-node
+    irrelevant-files: *noncodefiles
+    dependencies:
+      - name: openstack-tox-docs
+        soft: true
+      - name: airship-airshipctl-lint
+        soft: true
+      - name: airship-airshipctl-unit
+        soft: true
+      - name: airship-airshipctl-golint
+        soft: true
+      - name: airship-airshipctl-build-image
+        soft: true
+      - name: airship-airshipctl-validate-site-docs
+        soft: true
+    vars:
+      site_name: docker-test-site
+      gate_scripts: &docker_gate_scripts
+        - ./tools/deployment/21_systemwide_executable.sh
+        - ./tools/deployment/01_install_kubectl.sh
+        - ./tools/deployment/provider_common/01_install_kind.sh
+        - ./tools/deployment/provider_common/02_install_jq.sh
+        - ./tools/deployment/provider_common/03_install_pip.sh
+        - ./tools/deployment/provider_common/04_install_yq.sh
+        - CLUSTER=ephemeral-cluster KIND_CONFIG=./tools/deployment/templates/kind-cluster-with-extramounts ./tools/document/start_kind.sh
+        - AIRSHIP_CONFIG_METADATA_PATH=manifests/site/docker-test-site/metadata.yaml SITE=docker-test-site EXTERNAL_KUBECONFIG="true" ./tools/deployment/22_test_configs.sh
+        - ./tools/deployment/23_pull_documents.sh
+        - PROVIDER=default SITE=docker-test-site ./tools/deployment/26_deploy_capi_ephemeral_node.sh
+        - ./tools/deployment/provider_common/30_deploy_controlplane.sh
+        - ./tools/deployment/provider_common/32_cluster_init_target_node.sh
+        - ./tools/deployment/provider_common/33_cluster_move_target_node.sh
+        - ./tools/deployment/provider_common/35_deploy_worker_node.sh
+    voting: false
+- job:
+    name: airship-airshipctl-docker-kubebench-conformance
+    attempts: 1
+    timeout: 10800
+    pre-run: playbooks/airship-airshipctl-deploy-docker.yaml
+    run: playbooks/airshipctl-gate-runner.yaml
+    nodeset: airship-airshipctl-single-node
+    irrelevant-files: *noncodefiles
+    dependencies:
+      - name: openstack-tox-docs
+        soft: true
+      - name: airship-airshipctl-lint
+        soft: true
+      - name: airship-airshipctl-unit
+        soft: true
+      - name: airship-airshipctl-golint
+        soft: true
+      - name: airship-airshipctl-build-image
+        soft: true
+      - name: airship-airshipctl-validate-site-docs
+        soft: true
+    vars:
+      site_name: docker-test-site
+      gate_scripts:
+        - *docker_gate_scripts
+        - KUBECONFIG=/tmp/target-cluster.kubeconfig TARGET_CLUSTER_CONTEXT=target-cluster ./tools/deployment/sonobuoy/01-install_sonobuoy.sh
+        - KUBECONFIG=/tmp/target-cluster.kubeconfig TARGET_CLUSTER_CONTEXT=target-cluster ./tools/deployment/sonobuoy/03-kubebench.sh
+    voting: false
+- job:
+    name: airship-airshipctl-docker-cncf-conformance
+    attempts: 1
+    timeout: 10800
+    pre-run: playbooks/airship-airshipctl-deploy-docker.yaml
+    run: playbooks/airshipctl-gate-runner.yaml
+    nodeset: airship-airshipctl-single-node
+    irrelevant-files: *noncodefiles
+    dependencies:
+      - name: openstack-tox-docs
+        soft: true
+      - name: airship-airshipctl-lint
+        soft: true
+      - name: airship-airshipctl-unit
+        soft: true
+      - name: airship-airshipctl-golint
+        soft: true
+      - name: airship-airshipctl-build-image
+        soft: true
+      - name: airship-airshipctl-validate-site-docs
+        soft: true
+    vars:
+      site_name: docker-test-site
+      gate_scripts:
+        - *docker_gate_scripts
+        - KUBECONFIG=/tmp/target-cluster.kubeconfig TARGET_CLUSTER_CONTEXT=target-cluster ./tools/deployment/sonobuoy/01-install_sonobuoy.sh
+        - KUBECONFIG=/tmp/target-cluster.kubeconfig TARGET_CLUSTER_CONTEXT=target-cluster CONFORMANCE_MODE=certified-conformance ./tools/deployment/sonobuoy/02-run_default.sh
+    voting: false
+- job:
+    name: airship-airshipctl-publish-image
+    nodeset: airship-airshipctl-single-node
+    run: playbooks/airship-airshipctl-publish-images.yaml
+    irrelevant-files: *noncodefiles
+    secrets:
+      - name: airshipctl_image_repo_credentials
+        secret: airshipctl_image_repo_credentials
+        pass-to-parent: true
+    vars:
+      image: quay.io/airshipit/airshipctl

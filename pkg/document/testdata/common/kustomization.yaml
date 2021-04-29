@@ -1,0 +1,7 @@
+resources:
+ - baremetal.yaml
+ - tiller.yaml
+ - argo.yaml
+ - initially_ignored.yaml
+ - custom_resource.yaml
+ - clusterctl.yaml

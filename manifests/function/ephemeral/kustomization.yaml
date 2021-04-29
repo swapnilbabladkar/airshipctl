@@ -1,0 +1,3 @@
+resources:
+  - secret.yaml
+  - remote_direct_configuration.yaml

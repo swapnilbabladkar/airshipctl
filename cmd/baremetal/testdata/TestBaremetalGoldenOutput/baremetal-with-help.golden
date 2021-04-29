@@ -1,0 +1,18 @@
+Perform actions on baremetal hosts
+
+Usage:
+  baremetal [command]
+
+Available Commands:
+  ejectmedia   Eject media attached to a baremetal hosts
+  help         Help about any command
+  poweroff     Shutdown a baremetal hosts
+  poweron      Power on a hosts
+  powerstatus  Retrieve the power status of a baremetal host
+  reboot       Reboot a hosts
+  remotedirect Bootstrap the ephemeral host
+
+Flags:
+  -h, --help   help for baremetal
+
+Use "baremetal [command] --help" for more information about a command.

@@ -1,0 +1,6 @@
+resources:
+  - generated/secrets.yaml
+
+transformers:
+  - decrypt-secrets
+  - ../overrideplacement

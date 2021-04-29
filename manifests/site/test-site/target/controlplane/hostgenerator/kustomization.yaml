@@ -1,0 +1,15 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../../../../../function/hostgenerator-m3
+  - ../../../../../function/hardwareprofile-example
+  - ../../catalogues
+  - host-generation.yaml
+
+transformers:
+  - ../../../../../function/hardwareprofile-example/replacements
+  - ../../../../../function/hostgenerator-m3/replacements
+  # NOTE We can not use patchesStrategicMerge directive since Strategic Merge
+  # plugin has to be executed once all replacements has been done. Therefore
+  # we need to load Strategic Merge plugin as an external plugin
+  - ../../../../../function/airshipctl-cleanup/

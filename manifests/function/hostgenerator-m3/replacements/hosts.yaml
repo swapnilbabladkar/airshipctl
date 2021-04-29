@@ -1,0 +1,39 @@
+# These rules inject host-specific information from the `host-catalogue`
+# into the hostgenerator-m3 function's Template plugin config.
+apiVersion: airshipit.org/v1alpha1
+kind: ReplacementTransformer
+metadata:
+  name: m3-host-replacements
+  annotations:
+    config.kubernetes.io/function: |-
+      container:
+        image: quay.io/airshipit/replacement-transformer:v2
+replacements:
+- source:
+    objref:
+      name: host-catalogue
+    fieldref: "{.hosts.m3}"
+  target:
+    objref:
+      kind: Templater
+      name: m3-host-template
+    fieldrefs: ["{.values.hosts}"]
+- source:
+    objref:
+      name: host-generation-catalogue
+    fieldref: "{.hosts.m3}"
+  target:
+    objref:
+      kind: Templater
+      name: m3-host-template
+    fieldrefs: ["{.values.hostsToGenerate}"]
+- source:
+    objref:
+      kind: NetworkCatalogue
+      name: networking
+    fieldref: "{.spec.commonHostNetworking}"
+  target:
+    objref:
+      kind: Templater
+      name: m3-host-template
+    fieldrefs: ["{.values.commonNetworking}"]

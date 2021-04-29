@@ -1,0 +1,35 @@
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+---
+- name: Ensure libvirt storage pools are defined
+  virt_pool:
+    name: "{{ libvirt_pool.name }}"
+    command: define
+    xml: "{{ libvirt_pool.xml | default(libvirt_pool_template_default) }}"
+  register: pool_info
+
+- name: Ensure libvirt storage pools are built
+  virt_pool:
+    name: "{{ libvirt_pool.name }}"
+    command: build
+  when: pool_info.changed
+
+- name: Ensure libvirt storage pools are active
+  virt_pool:
+    name: "{{ libvirt_pool.name }}"
+    state: active
+
+- name: Ensure libvirt storage pools are started on boot
+  virt_pool:
+    name: "{{ libvirt_pool.name }}"
+    autostart: yes

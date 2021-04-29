@@ -1,0 +1,67 @@
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+- project:
+    vars:
+      sphinx_build_dir: docs/build
+      proxy:
+        enabled: false
+        http: ""
+        https: ""
+        noproxy: ""
+      image_repo: quay.io
+      image_prefix: airshipit
+      docker:
+        base_go_image: ""
+        base_release_image: ""
+        base_plugins_build_image: ""
+        base_plugins_release_image: ""
+
+    check:
+      jobs:
+        - openstack-tox-docs: &docs
+            files:
+              - ^docs/.*$
+        - airship-airshipctl-golint
+        - airship-airshipctl-lint
+        - airship-airshipctl-unit
+        - airship-airshipctl-roles-test
+        - airship-airshipctl-check-github-issues
+        - airship-airshipctl-build-image
+        - airship-airshipctl-validate-site-docs
+#        - airship-airshipctl-functional-existing-k8s TODO: Enable this when functional tests exist, and a cluster is up
+        - airship-airshipctl-gate-script-runner-docker
+    experimental:
+      jobs:
+        - airship-airshipctl-docker-kubebench-conformance
+        - airship-airshipctl-docker-cncf-conformance
+        - airship-airshipctl-gate-script-runner
+    gate:
+      jobs:
+        - openstack-tox-docs: *docs
+        - airship-airshipctl-lint
+        - airship-airshipctl-unit
+        - airship-airshipctl-build-image
+        - airship-airshipctl-validate-site-docs
+        - airship-airshipctl-gate-script-runner
+
+#        - airship-airshipctl-functional-existing-k8s TODO: Enable this when functional tests exist, and a cluster is up
+    post:
+      jobs:
+        - airship-airshipctl-publish-image
+        - airship-airshipctl-upload-git-mirror
+    promote:
+      jobs:
+        - promote-airship-project-docs: *docs
+    tag:
+      jobs:
+        - airship-airshipctl-upload-git-mirror

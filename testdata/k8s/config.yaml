@@ -1,0 +1,17 @@
+apiVersion: airshipit.org/v1alpha1
+contexts:
+  default:
+    manifest: default
+currentContext: ""
+kind: Config
+manifests:
+  default:
+    repository:
+      checkout:
+        branch: master
+        commitHash: master
+        force: false
+        remoteRef: master
+        tag: ""
+      url: https://opendev.org/airship/treasuremap
+    targetPath: /tmp/default

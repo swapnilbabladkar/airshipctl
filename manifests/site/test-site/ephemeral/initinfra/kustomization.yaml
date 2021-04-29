@@ -1,0 +1,11 @@
+resources:
+  - ../../../../function/baremetal-operator
+  - ../../../../function/hwcc
+  - ../../../../function/clusterctl
+  - ../catalogues
+
+commonLabels:
+  airshipit.org/stage: initinfra
+
+transformers:
+  - ../../../../function/baremetal-operator/replacements

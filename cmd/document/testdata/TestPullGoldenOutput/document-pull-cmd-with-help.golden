@@ -1,0 +1,8 @@
+Pulls documents from remote git repository
+
+Usage:
+  pull [flags]
+
+Flags:
+  -h, --help          help for pull
+  -n, --no-checkout   No checkout is performed after the clone is complete.

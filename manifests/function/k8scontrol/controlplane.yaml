@@ -1,0 +1,65 @@
+kind: KubeadmControlPlane
+apiVersion: controlplane.cluster.x-k8s.io/v1alpha3
+metadata:
+  name: cluster-controlplane
+spec:
+  replicas: 1
+  version: v1.18.6
+  infrastructureTemplate:
+    kind: Metal3MachineTemplate
+    apiVersion: infrastructure.cluster.x-k8s.io/v1alpha4
+    name: cluster-controlplane
+  kubeadmConfigSpec:
+    clusterConfiguration:
+      apiServer:
+        timeoutForControlPlane: 1000s
+    files:
+      - path: "/etc/systemd/system/docker.service.d/http-proxy.conf"
+        content: |
+          [Service]
+          Environment="HTTP_PROXY=REPLACEMENT_HTTP_PROXY"
+          Environment="HTTPS_PROXY=REPLACEMENT_HTTPS_PROXY"
+          Environment="NO_PROXY=REPLACEMENT_NO_PROXY"
+    # TODO: add download sources to the versions catalogue
+    preKubeadmCommands:
+      # Restart docker to apply any proxy settings
+      - export HOME=/root
+      - systemctl daemon-reload
+      - systemctl restart docker
+    initConfiguration:
+      nodeRegistration:
+        name: '{{ ds.meta_data.local_hostname }}'
+        kubeletExtraArgs:
+          node-labels: 'metal3.io/uuid={{ ds.meta_data.uuid }},node-type=controlplane'
+    joinConfiguration:
+      controlPlane: {}
+      nodeRegistration:
+        name: '{{ ds.meta_data.local_hostname }}'
+        kubeletExtraArgs:
+          node-labels: 'metal3.io/uuid={{ ds.meta_data.uuid }},node-type=controlplane'
+    ntp:
+       servers:
+          - 0.pool.ntp.org
+          - 1.pool.ntp.org
+          - 2.pool.ntp.org
+          - 3.pool.ntp.org
+    users:
+    - name: deployer
+      sshAuthorizedKeys:
+      - REPLACE_HOST_SSH_KEY
+      sudo: ALL=(ALL) NOPASSWD:ALL
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha4
+kind: Metal3MachineTemplate
+metadata:
+  name: cluster-controlplane
+spec:
+  template:
+    spec:
+      image:
+        # NOTE (dukov) this should be overridden on lower levels
+        url: https://cloud-images.ubuntu.com/focal/current/focal-server-cloudimg-amd64.img
+        checksum: 2c890254ecbd4e6b4931f864ef72b337
+      hostSelector:
+        matchLabels:
+          airshipit.org/k8s-role: controlplane-host

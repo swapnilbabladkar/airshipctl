@@ -1,0 +1,3 @@
+[
+  { "op": "replace","path": "/spec/template/spec/failureDomain","value": "us-east1-b" }
+]
