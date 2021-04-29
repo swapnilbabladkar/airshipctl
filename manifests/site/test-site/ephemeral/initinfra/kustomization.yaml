@@ -1,6 +1,7 @@
 resources:
   - ../../../../function/baremetal-operator
   - ../../../../function/hwcc
+  - ../../../../function/synclabeller
   - ../../../../function/clusterctl
   - ../catalogues
 

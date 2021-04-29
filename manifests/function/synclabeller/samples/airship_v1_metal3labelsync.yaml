@@ -1,0 +1,7 @@
+apiVersion: airship.airshipit.org/v1
+kind: Metal3LabelSync
+metadata:
+  name: metal3labelsync-sample
+spec:
+  # Add fields here
+  foo: bar

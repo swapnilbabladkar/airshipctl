@@ -1,5 +1,6 @@
 resources:
   - ../../../../function/airshipctl-base-catalogues
   - ../../../../type/gating/target/workload
+  - ../../../../function/synclabeller
 transformers:
   - ../../../../type/gating/target/workload/ingress/replacements
